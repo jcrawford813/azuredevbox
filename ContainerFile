@@ -20,15 +20,18 @@ RUN sed -Ei 's/^(hosts:.*)(\<files\>)\s*(.*)/\1\2 myhostname \3/' /etc/nsswitch.
 # Prevent questions when installing packages
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Add Microsoft Repository
+# Add Microsoft Keys
 RUN apt-get update && \
     apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release && \
     mkdir -p /etc/apt/keyrings && \
     curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
-        gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null && \
-        echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/azure-cli stable main" | tee /etc/apt/sources.list.d/azure-cli.sources && \
-        echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null
-    
+        gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+
+# Add HashiCorp Keys
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+
+# Copy sources
+COPY ./sources/* /etc/apt/sources.list.d/
 
 # Install packages
 RUN apt-get update && \
@@ -44,6 +47,7 @@ RUN apt-get update && \
         sudo \
         unzip \
         git-lfs \
+        terraform \
         wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
