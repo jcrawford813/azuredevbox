@@ -51,7 +51,8 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Azure Data Studio
-RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable | dpkg -i
+RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable
+RUN dpkg -i azuredatastudio*.deb
 
 RUN apt-get install libunwind8
 RUN apt install --fix-broken
