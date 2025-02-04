@@ -1,0 +1,57 @@
+FROM docker.io/library/debian:12
+
+LABEL com.github.containers.toolbox="true" \
+      name="azuredev-toolbox" \
+      version="12" \
+      usage="This image is meant to be used with the toolbox command" \
+      summary="Custom image for Azure development" \
+      maintainer="jim@mycodinglife.com"
+
+# Remove apt configuration optimized for containers
+# Remove docker-gzip-indexes to help with "command-not-found"
+RUN rm /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
+
+# Enable myhostname nss plugin for clean hostname resolution without patching
+# hosts (at least for sudo), add it right after 'files' entry. We expect that
+# this entry is not present yet. Do this early so that package postinst (which
+# adds it too late in the order) skips this step
+RUN sed -Ei 's/^(hosts:.*)(\<files\>)\s*(.*)/\1\2 myhostname \3/' /etc/nsswitch.conf
+
+# Prevent questions when installing packages
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Add Microsoft Repository
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends apt-transport-https && \
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
+    mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg && \
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list && \
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/code/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/vscode.list
+
+# Install packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y install \
+        libnss-myhostname \
+        azure-cli \
+        code \
+        git \
+        jq \
+        less \
+        python3-pip \
+        python3-venv \
+        sudo \
+        unzip \
+        git-lfs \
+        wget && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Azure Data Studio
+RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable | dpkg -i
+
+RUN apt-get install libunwind8
+RUN apt install --fix-broken
+
+# Enable password less sudo
+RUN sed -i -e 's/ ALL$/ NOPASSWD:ALL/' /etc/sudoers
+
+RUN echo VARIANT_ID=container >> /etc/os-release

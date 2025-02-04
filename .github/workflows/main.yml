@@ -1,0 +1,131 @@
+name: build-azuredevbox
+on:
+  workflow_dispatch: # allow manually triggering builds
+  push:
+     paths-ignore: # don't rebuild on documentation change
+      - '**.md'
+  schedule:
+    - cron: '0 0 * * SUN'
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+
+jobs:
+  push-ghcr:
+    name: Build and push image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - is_latest: true
+          is_stable: true
+          major_version: 1
+    
+    steps:
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          alias_tags=()
+          # Only perform the follow code when the action is spawned from a Pull Request
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            alias_tags+=("pr-${{ github.event.number }}")
+          else
+            # The following is run when the timer is triggered or a merge/push to main
+            echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+            alias_tags+=("${{ matrix.major_version }}")
+            if [[ "${{ matrix.is_latest }}" == "true" ]]; then
+              alias_tags+=("latest")
+            fi
+            if [[ "${{ matrix.is_stable }}" == "true" ]]; then
+              alias_tags+=("stable")
+            fi
+          fi
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+            cosign-release: 'v2.2.4'
+
+      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
+      # https://github.com/macbre/push-to-ghcr/issues/12
+      - name: Lowercase Registry
+        id: registry_case
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ env.REGISTRY }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Build and push image using Buildah
+      - name: Build Docker image
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: |
+            ./ContainerFile
+          image: ${{ env.IMAGE_NAME }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+            ${{ steps.generate-tags.outputs.date }}
+            ${{ steps.generate-tags.outputs.sha_short }}
+          labels:
+          oci: true
+      
+      # Push the image to GitHub's repo.
+      - name: Push To GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          image: ${{ steps.build.outputs.image }}
+          tags: ${{ steps.build.outputs.tags }}
+          registry: ${{ steps.registry_case.outputs.lowercase }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          extra-args: |
+            --disable-content-trust
+
+      # Login to the CR to prepare for signing.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sign the resulting Docker image digest except on PRs.
+      # This will only write to the public Rekor transparency log when the Docker
+      # repository is public to avoid leaking data.  If you would like to publish
+      # transparency data even for private images, pass --force to cosign below.
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        # Perform signing of the container image.
+        run: |
+          cosign sign --yes ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
+        env:
+          TAGS: ${{ steps.push.outputs.digest }}
+          COSIGN_EXPERIMENTAL: false
