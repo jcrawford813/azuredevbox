@@ -22,11 +22,19 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Add Microsoft Repository
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends apt-transport-https gpg wget && \
-    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg && \
-    mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/code/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/vscode.list
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
+        gpg --dearmor | sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null && \
+    AZ_DIST=$(lsb_release -cs) \
+        echo "Types: deb \
+        URIs: https://packages.microsoft.com/repos/azure-cli/ \
+        Suites: ${AZ_DIST} \
+        Components: main \
+        Architectures: $(dpkg --print-architecture) \
+        Signed-by: /etc/apt/keyrings/microsoft.gpg" | sudo tee /etc/apt/sources.list.d/azure-cli.sources && \
+        echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" |sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+    
 
 # Install packages
 RUN apt-get update && \
