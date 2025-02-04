@@ -22,10 +22,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Add Microsoft Keys
 RUN apt-get update && \
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
-        gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+
+RUN curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /usr/share/keyrings/packages.microsoft.gpg > /dev/null
 
 # Add HashiCorp Keys
 RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
