@@ -34,6 +34,7 @@ COPY ./sources/* /etc/apt/sources.list.d/
 
 # Install packages
 RUN apt-get update && \
+    apt-get upgrade -y && \
     DEBIAN_FRONTEND=noninteractive apt-get -y install \
         libnss-myhostname \
         azure-cli \
@@ -54,8 +55,8 @@ RUN apt-get update && \
 RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable >> azuredatastudio.deb
 RUN dpkg -i azuredatastudio.deb
 
-RUN apt install libxss1 libgconf-2-4 libunwind8
-RUN apt install --fix-broken
+RUN apt-get install -y libxss1 libgconf-2-4 libunwind8
+RUN apt-get install -y --fix-broken
 
 # Enable password less sudo
 RUN sed -i -e 's/ ALL$/ NOPASSWD:ALL/' /etc/sudoers
