@@ -54,7 +54,7 @@ RUN apt-get update && \
 RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable >> azuredatastudio.deb
 RUN dpkg -i azuredatastudio.deb
 
-RUN apt-get install libunwind8
+RUN apt install libxss1 libgconf-2-4 libunwind8
 RUN apt install --fix-broken
 
 # Enable password less sudo
