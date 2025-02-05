@@ -57,6 +57,8 @@ RUN dpkg -i azuredatastudio.deb
 
 RUN apt-get install -y --fix-broken
 
+#Final cleanup
+RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable password less sudo
