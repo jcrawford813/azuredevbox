@@ -1,9 +1,9 @@
 FROM docker.io/library/debian:12
 
 LABEL com.github.containers.toolbox="true" \
-      name="azuredev-toolbox" \
+      name="azuredev-distrobox" \
       version="12" \
-      usage="This image is meant to be used with the toolbox command" \
+      usage="This image is meant to be used with the distrobox command" \
       summary="Custom image for Azure development" \
       maintainer="jim@mycodinglife.com"
 
@@ -22,12 +22,19 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Add Microsoft Keys
 RUN apt-get update && \
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release wget
 
 RUN curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /usr/share/keyrings/packages.microsoft.gpg > /dev/null
 
 # Add HashiCorp Keys
 RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+
+#Add Microsoft Repo
+RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+RUN dpkg -i packages-microsoft-prod.deb
+
+#Add Edge Repo so that web links in Code will work.
+RUN echo 'deb [signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/edge stable main' | tee /etc/apt/sources.list.d/microsoft-edge.list
 
 # Copy sources
 COPY ./sources/* /etc/apt/sources.list.d/
@@ -48,7 +55,10 @@ RUN apt-get update && \
         unzip \
         git-lfs \
         terraform \
-        wget
+        wget \
+        dotnet-sdk-9.0 \
+        dotnet-sdk-8.0 \
+        microsoft-edge-stable
     
 # Install Azure Data Studio
 RUN apt-get install -y libxss1 libgconf-2-4 libunwind8 libsecret-1-0
