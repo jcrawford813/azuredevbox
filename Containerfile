@@ -59,11 +59,6 @@ RUN apt-get update && \
         dotnet-sdk-9.0 \
         dotnet-sdk-8.0 \
         microsoft-edge-stable
-    
-# Install Azure Data Studio
-RUN apt-get install -y libxss1 libgconf-2-4 libunwind8 libsecret-1-0
-RUN wget -qO- https://azuredatastudio-update.azurewebsites.net/latest/linux-deb-x64/stable >> azuredatastudio.deb
-RUN dpkg -i azuredatastudio.deb
 
 RUN apt-get install -y --fix-broken
 
