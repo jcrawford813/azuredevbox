@@ -68,5 +68,7 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable password less sudo
 RUN sed -i -e 's/ ALL$/ NOPASSWD:ALL/' /etc/sudoers
+RUN chown root:root /etc/sudoers
+RUN chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo
 
 RUN echo VARIANT_ID=container >> /etc/os-release
