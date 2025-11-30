@@ -1,8 +1,8 @@
-FROM docker.io/library/debian:12
+FROM docker.io/library/debian:13
 
 LABEL com.github.containers.toolbox="true" \
       name="azuredev-distrobox" \
-      version="12" \
+      version="13" \
       usage="This image is meant to be used with the distrobox command" \
       summary="Custom image for Azure development" \
       maintainer="jim@mycodinglife.com"
@@ -30,7 +30,7 @@ RUN curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 
 RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
 
 #Add Microsoft Repo
-RUN wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+RUN wget https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 RUN dpkg -i packages-microsoft-prod.deb
 
 #Add Edge Repo so that web links in Code will work.
